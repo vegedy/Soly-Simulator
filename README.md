@@ -188,3 +188,40 @@ python -m ruff format .
 Diese beiden Befehle ändern Dateien. Die Änderungen vor dem Commit prüfen;
 verbleibende Lint-Meldungen müssen manuell behoben werden. Die Importsortierung
 übernimmt `ruff check --fix`, die Formatierung übernimmt `ruff format`.
+
+## Statische Typprüfung mit mypy
+
+mypy **2.4.0** prüft Typangaben im Python-Code. Die Konfiguration steht in
+`pyproject.toml`: Python 3.12 als Sprachziel, `strict = true` und die
+Prüfverzeichnisse `src/` sowie `tests/`. Der strenge Modus verlangt unter
+anderem Typangaben für Funktionsparameter und Rückgabewerte und meldet
+inkompatible Typen.
+
+Für die gezielte Installation in der aktivierten `.venv`:
+
+```bash
+python -m pip install "mypy==2.4.0"
+```
+
+Bei Installation mit `python -m pip install -e ".[dev]"` ist mypy bereits
+enthalten.
+
+Aus dem Service-Verzeichnis Quellcode und Tests gemeinsam prüfen:
+
+```bash
+python -m mypy
+```
+
+Ohne Pfadangaben verwendet mypy die in `pyproject.toml` eingetragenen
+Verzeichnisse. Explizite Pfadangaben ersetzen diese Auswahl für den jeweiligen
+Aufruf:
+
+```bash
+python -m mypy src
+python -m mypy src tests
+```
+
+Der erste Befehl prüft nur den Quellcode, der zweite Quellcode und Tests.
+mypy ändert keine Quelldateien. Sein Cache unter `.mypy_cache/` ist über
+`.gitignore` ausgeschlossen. Die Typprüfung ergänzt die Tests mit pytest;
+sie führt den Anwendungscode nicht aus.
