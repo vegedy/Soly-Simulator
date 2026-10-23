@@ -33,6 +33,7 @@ testpaths = ["tests"]
 addopts = ["--import-mode=importlib", "--strict-config", "--strict-markers"]
 
 [tool.ruff]
+required-version = "==0.17.2"
 target-version = "py312"
 line-length = 88
 src = ["src", "tests"]

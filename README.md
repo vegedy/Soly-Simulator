@@ -146,3 +146,45 @@ Einzelnen Smoke-Test ausführen:
 ```bash
 python -m pytest tests/test_import.py
 ```
+
+## Linting und Formatierung mit Ruff
+
+Ruff **0.17.2** übernimmt Linting und Formatierung für den Python-Code in
+`src/` und `tests/`. Die zentrale Konfiguration steht in `pyproject.toml`:
+Python 3.12 als Sprachziel, 88 Zeichen als Zielbreite beim Formatieren und
+eine Prüfung der verwendeten Ruff-Version.
+
+Die aktivierten Lint-Regeln prüfen grundlegende Codefehler (`E4`, `E7`, `E9`,
+`F`), die Importsortierung (`I`), moderne Python-Schreibweisen (`UP`) und
+häufige Fehlerquellen (`B`).
+
+Für die gezielte Installation in der aktivierten `.venv`:
+
+```bash
+python -m pip install "ruff==0.17.2"
+```
+
+Bei Installation mit `python -m pip install -e ".[dev]"` ist Ruff bereits
+enthalten.
+
+Aus dem Service-Verzeichnis prüfen, ohne den Quellcode zu verändern:
+
+```bash
+python -m ruff check .
+python -m ruff format --check .
+```
+
+Beide Befehle berücksichtigen Quellcode und Tests. Die `.venv` sowie die in
+`.gitignore` ausgeschlossenen Artefakte werden bei der Verzeichnissuche
+übersprungen.
+
+Automatisch korrigierbare Lint-Probleme beheben und anschließend formatieren:
+
+```bash
+python -m ruff check --fix .
+python -m ruff format .
+```
+
+Diese beiden Befehle ändern Dateien. Die Änderungen vor dem Commit prüfen;
+verbleibende Lint-Meldungen müssen manuell behoben werden. Die Importsortierung
+übernimmt `ruff check --fix`, die Formatierung übernimmt `ruff format`.
