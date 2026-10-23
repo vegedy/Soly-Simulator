@@ -109,8 +109,8 @@ python -m mypy src
 ```
 
 Zum automatischen Formatieren `python -m ruff format .` verwenden.
-Sobald `tests/` angelegt ist, kann es mit `python -m mypy src tests` ebenfalls
-in die Typprüfung einbezogen werden.
+Mit `python -m mypy src tests` können auch die Tests in die Typprüfung
+einbezogen werden.
 
 Die virtuelle Umgebung am Ende der Sitzung verlassen:
 
@@ -122,3 +122,27 @@ Eine Aktivierung ist optional, wenn der Interpreter direkt aufgerufen wird,
 zum Beispiel unter Linux/macOS mit `.venv/bin/python -m pip check` oder unter
 Windows mit `.\.venv\Scripts\python.exe -m pip check`.
 
+## Tests mit pytest
+
+Die Tests liegen unter `tests/`. `tests/test_import.py` prüft als Smoke-Test,
+dass sich das installierte Paket `soly_simulator` importieren lässt. Die
+Konfiguration in `pyproject.toml` verwendet diesen Testordner, den Importmodus
+`importlib` sowie strenge Prüfungen für Konfiguration und Marker. Zusätzliche
+Python-Suchpfade werden nicht gesetzt; das Projekt muss vorher installiert sein.
+
+Für die gezielte Einrichtung von pytest ohne die übrigen Entwicklungswerkzeuge
+in der aktivierten `.venv`:
+
+```bash
+python -m pip install -e . "pytest==9.1.1"
+python -m pytest
+```
+
+Wer bereits `python -m pip install -e ".[dev]"` ausgeführt hat, hat pytest schon
+installiert und kann direkt die Tests starten.
+
+Einzelnen Smoke-Test ausführen:
+
+```bash
+python -m pytest tests/test_import.py
+```
