@@ -1,0 +1,16 @@
+# Allow only inputs required to package and verify the installed service.
+# This also excludes .git, .venv, caches, credentials, datasets and test output.
+**
+!Dockerfile
+!.dockerignore
+!pyproject.toml
+!README.md
+!LICENSE
+!requirements/
+!requirements/build.txt
+!requirements/runtime.txt
+!src/
+!src/soly_simulator/
+!src/soly_simulator/**/*.py
+!docker/
+!docker/smoke_test.py
