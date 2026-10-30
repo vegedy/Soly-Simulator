@@ -153,3 +153,27 @@ und in Pull Requests wird kein Docker-Image gebaut. Ein fehlgeschlagener Build
 oder Smoke-Test lässt den Workflow fehlschlagen. Die Actions sind über Commit-IDs
 fixiert; der Workflow besitzt nur `contents: read` und benötigt keine Secrets.
 Images werden nicht in eine Registry veröffentlicht.
+
+
+## Unterstützter Ereignisvertrag
+
+Dieser Service unterstützt **Soly event contract v1**.
+
+Erzeugt Rohmessungen mit unveränderten Zustandsstrings, Quellzeit und ausdrücklicher Snapshot-/Änderungskennzeichnung.
+Diese Rolle beschreibt die vorgesehene Schnittstelle; die fachliche
+Service-Implementierung und Laufzeitvalidierung folgen in eigenen Issues.
+
+Die [maßgebliche Spezifikation](https://github.com/vegedy/Soly/blob/abd467e82f1bf57279ae3c14a01a765389daad90/docs/data-contract.md)
+ist auf einen unveränderlichen, veröffentlichten Hauptrepo-Commit festgeschrieben.
+[contracts/v1/](contracts/v1/) enthält eine identische lokale Kopie aller Schemata,
+des Sensorkatalogs und der synthetischen Beispiele. Der eigenständige Checkout
+benötigt dafür weder das Hauptrepo noch benachbarte Services.
+[contracts/provenance.json](contracts/provenance.json) nennt unterstützte Version,
+Herkunftsrepository, vollständigen Commit und SHA-256-Prüfsummen aller Dateien.
+Es gibt keine Schema-Downloads beim Start und keine Laufzeitimporte aus Submodulen.
+
+Veröffentlichte v1-Artefakte bleiben unverändert. Änderungen am Vertragsverhalten
+benötigen eine neue Version; unbekannte Versionen werden künftig ausdrücklich
+abgelehnt. Eine Vertragsaktualisierung übernimmt alle Artefakte und das
+Herkunftsmanifest gemeinsam und wird mit den zentralen Vertragsprüfungen geprüft.
+Der abschließende Hauptrepo-CI-Lauf kontrolliert die Kopie und ihre Herkunft.
