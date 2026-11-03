@@ -5,41 +5,84 @@ Git-Submodule unter `Soly/simulator/`. Bisher sind die Python-Projektgrundlage
 und ein Import-Smoke-Test eingerichtet; die Ereignisgenerierung folgt separat.
 Docker-Image und CI validieren diesen Ausgangsstand.
 
-## Einrichtung
+## Entwicklungsbefehle
 
-Voraussetzung: **Python 3.12.15**. Alle Befehle im Service-Verzeichnis ausführen.
-Falls der Interpreter nicht im Suchpfad liegt, seinen vollständigen Pfad verwenden.
-
-Linux/macOS (Bash/Zsh):
+Voraussetzung: **Python 3.12.15**. `dev.sh` (POSIX-Shell unter Unix) und `dev.ps1`
+(Windows PowerShell 5.1 oder PowerShell 7) delegieren an `scripts/dev.py` mit
+Python-Standardbibliothek. Jeder Checkout besitzt eine eigene `.venv`; Aktivierung
+ist unnötig. Die Befehle bestimmen den Repository-Pfad selbst. Auch ein Aufruf aus
+einem anderen Verzeichnis oder ein Checkout-Pfad mit Leerzeichen funktioniert:
 
 ```bash
-python3.12 --version
-python3.12 -m venv .venv
-source .venv/bin/activate
+"/pfad mit Leerzeichen/Soly-Simulator/dev.sh" setup
+"/pfad mit Leerzeichen/Soly-Simulator/dev.sh" check
 ```
 
-Windows (PowerShell):
+Im Repository unter Unix:
+
+```bash
+./dev.sh setup
+./dev.sh check
+./dev.sh format
+```
+
+Unter Windows PowerShell:
 
 ```powershell
-py -3.12 --version
-py -3.12 -m venv .venv
-.\.venv\Scripts\Activate.ps1
+.\dev.ps1 setup
+.\dev.ps1 check
+.\dev.ps1 format
+# Aus einem anderen Verzeichnis:
+& 'C:\Projekte mit Leerzeichen\Soly-Simulator\dev.ps1' check
 ```
 
-Anschließend auf allen Plattformen zuerst die vollständigen, mit SHA-256-Hashes
-fixierten Entwicklungs- und Buildabhängigkeiten installieren und danach das eigene
-Paket editierbar einrichten. Die Installation des Pakets löst keine zusätzlichen
-Abhängigkeiten auf und startet keine unkontrollierte Build-Umgebung:
+| Befehl | Wirkung |
+|---|---|
+| `setup` | Erstellt oder verwendet `.venv`, installiert vorhandene Hash-Locks und prüft Abhängigkeiten. Erneut ausführbar; keine Lock-Neuauflösung. |
+| `check` | `pip check`, pytest, Ruff-Linting, Ruff-Formatprüfung und mypy einschließlich `scripts/`; stoppt beim ersten Fehler. |
+| `format` | Schreibt ausdrücklich Ruff-Formatänderungen in Projektdateien. |
+| `docker-smoke` | Baut `linux/amd64` als `soly-simulator:dev-smoke` und führt den vorhandenen isolierten Container-Smoke-Test aus. |
+
+`check` formatiert keine Dateien und legt Tool-Caches/Bytecode nicht im Checkout
+an. Externe Fehlercodes werden weitergegeben. Kein Befehl aktualisiert Submodule,
+löscht lokale Daten oder verändert globale Systemeinstellungen.
+
+Interpreterwahl: `SOLY_PYTHON` (ein vollständiger Dateipfad, keine zusätzlichen
+Argumente), vorhandene `.venv`, dann `python3.12`/`python3`/`python` unter Unix;
+PowerShell versucht vor den Python-Befehlen zusätzlich `py -3.12`. Eine ungeeignete
+Python-Version oder unvollständige `.venv` führt zu einem Hinweis, nicht zum
+Löschen/Ersetzen. Bei Bedarf die vorhandene Umgebung zuerst selbst prüfen und
+beiseitelegen. Einen bestimmten Interpreter auswählen:
 
 ```bash
-python -m pip install --require-hashes --only-binary=:all: -r requirements/dev.txt
-python -m pip install --no-deps --no-build-isolation -e ".[dev]"
-python -m pip check
+SOLY_PYTHON='/pfad zu Python/bin/python3.12' ./dev.sh setup
 ```
 
-In neuen Shells die vorhandene Umgebung erneut aktivieren; mit `deactivate`
-verlassen. `.venv/`, Caches und Build-Artefakte sind über `.gitignore`
-ausgeschlossen. Globale Paketinstallationen sind nicht erforderlich.
+```powershell
+$env:SOLY_PYTHON = 'C:\Pfad zu Python\python.exe'
+.\dev.ps1 setup
+```
+
+Falls die lokale PowerShell-Richtlinie Skripte sperrt, die geltende Richtlinie
+prüfen oder den Python-Einstieg direkt aufrufen; die Skripte ändern keine
+Sicherheitseinstellungen und verwenden keinen Execution-Policy-Bypass:
+
+```powershell
+py -3.12 scripts/dev.py setup
+& .\.venv\Scripts\python.exe scripts/dev.py check
+```
+
+Die CI nutzt `setup --use-current-python` und `check --use-current-python` mit dem
+bereits durch Actions eingerichteten Python. Lokal erlaubt `setup` diese Option
+nur in einer virtuellen Umgebung; außerhalb davon ist sie ausschließlich mit
+`CI=true` vorgesehen. Normalerweise ohne diese Option arbeiten. Die Skripte und
+Textdateien verwenden festgelegte Zeilenenden; Vertragsartefakte behalten über
+`.gitattributes` ihre exakten Bytes.
+
+`setup` installiert `requirements/dev.txt` mit
+`--require-hashes --only-binary=:all:`, danach das eigene Paket editierbar mit
+`--no-deps --no-build-isolation -e ".[dev]"`. Das Paket löst keine weiteren
+Abhängigkeiten auf. `.venv/`, Caches und Build-Artefakte bleiben ignoriert.
 
 ## Struktur
 
@@ -53,31 +96,17 @@ Dockerfile          Mehrstufiger Paket-Build und Laufzeit-Image
 pyproject.toml      Paketmetadaten, Abhängigkeiten und Werkzeugkonfiguration
 ```
 
-## Prüfungen
-
-In der aktivierten Umgebung:
-
-```bash
-python -m pip check              # Abhängigkeitskonsistenz
-python -m pytest                 # Tests
-python -m ruff check .           # Linting
-python -m ruff format --check .  # Formatprüfung
-python -m mypy src tests         # Typprüfung von Quellcode und Tests
-```
-
-Zum automatischen Formatieren: `python -m ruff format .`.
-
-
 ## Docker
 
 Alle Befehle benötigen nur einen Checkout von **Soly-Simulator**, kein Hauptrepo,
-keine lokale Python-Installation und keine `.venv`. Voraussetzung ist eine laufende
+keine `.venv`. Der Wrapper benötigt einen Python-Interpreter (empfohlen 3.12.15);
+Voraussetzung ist eine laufende
 Docker Engine. Die geprüfte Zielplattform ist **linux/amd64**; andere Plattformen
 sind bisher nicht verifiziert.
 
 ```bash
-docker build --platform linux/amd64 --tag soly-simulator:local .
-docker run --rm --network none --read-only --workdir /tmp soly-simulator:local
+./dev.sh docker-smoke
+# PowerShell: .\dev.ps1 docker-smoke
 ```
 
 Der Standardbefehl ist vorerst ein Smoke-Test, kein fachlicher Simulator-Start.
@@ -124,7 +153,7 @@ Eingaben, garantiert jedoch keine bitweise identischen Docker-Layer oder Wheel-Z
 
 Lockdateien werden bewusst mit **Python 3.12.15** und **pip-tools 7.5.2**
 aktualisiert. Dafür eine separate Umgebung anlegen und aktivieren
-(`python -m venv .venv-lock`, Aktivierung wie oben), dann:
+(`python -m venv .venv-lock`, unter Unix `source .venv-lock/bin/activate`, unter Windows `.\.venv-lock\Scripts\Activate.ps1`), dann:
 
 ```bash
 python -m pip install "pip-tools==7.5.2"
@@ -144,16 +173,37 @@ Lockdateien gemeinsam aktualisieren.
 
 Die CI läuft bei **jedem Push auf jeden Branch** sowie bei **Pull Requests nach
 `main`**. Sie installiert Python **3.12.15**, die gehashten Entwicklungsabhängigkeiten
-und das eigene Paket mit denselben Befehlen wie lokal. Danach laufen `pip check`,
-pytest, Ruff-Linting, Ruff-Formatprüfung und mypy für `src` und `tests`.
+und das eigene Paket über `setup --use-current-python`. Danach führt
+`check --use-current-python` dieselben Prüfungen wie lokal aus, einschließlich
+der Typprüfung von `src`, `tests` und `scripts`. Die Python-Jobs laufen unter
+Ubuntu 24.04 mit `dev.sh` und Windows 2025 mit `dev.ps1`, jeweils in einem
+Checkout-Pfad mit Leerzeichen.
 
 **Docker-Build und Container-Smoke-Test laufen ausschließlich bei Pushes auf
 `main`**, nachdem alle Python-Prüfungen erfolgreich waren. Auf Arbeitsbranches
 und in Pull Requests wird kein Docker-Image gebaut. Ein fehlgeschlagener Build
-oder Smoke-Test lässt den Workflow fehlschlagen. Die Actions sind über Commit-IDs
+oder Smoke-Test über `./dev.sh docker-smoke` lässt den Workflow fehlschlagen. Die Actions sind über Commit-IDs
 fixiert; der Workflow besitzt nur `contents: read` und benötigt keine Secrets.
 Images werden nicht in eine Registry veröffentlicht.
 
+
+## Validierung von SOLY-18
+
+Am **3. November 2026** unter **Linux x86_64**, Python **3.12.15** und
+**PowerShell 7.5.4** tatsächlich ausgeführt: frischer eigenständiger Checkout in
+einem Pfad mit Leerzeichen, `setup` über Unix und PowerShell erneut ausgeführt,
+`check` und `format` über beide Einstiege, außerdem `setup/check` mit
+`--use-current-python`. Alle Prüfungen erfolgreich (**15 Tests**, pip check,
+Ruff und mypy). Dateiinhalt und Änderungszeit der Projektdateien blieben bei
+beiden `check`-Aufrufen unverändert. Fehlercodes, unvollständige Umgebungen,
+fehlende Werkzeuge und Plattformhinweise sind zusätzlich durch Regressionstests
+abgedeckt. `./dev.sh docker-smoke` wurde auf **linux/amd64** erfolgreich ausgeführt.
+Locks, Laufzeitpins und der bestehende Container-Smoke-Test wurden nicht geändert.
+
+Native Windows-Ausführung ist in der CI auf **windows-2025** vorgesehen;
+Windows PowerShell 5.1 und macOS wurden lokal nicht ausgeführt. Ein PowerShell-
+Test unter Linux ist kein nativer Windows-Nachweis. Die tatsächlichen GitHub-
+Ergebnisse sind im Actions-Lauf des jeweiligen Commits zu prüfen.
 
 ## Unterstützter Ereignisvertrag
 
