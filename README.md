@@ -26,7 +26,7 @@ Im Repository unter Unix:
 ./dev.sh format
 ```
 
-Unter Windows PowerShell:
+Unter Windows PowerShell (mit vorhandenem Python 3.12.15):
 
 ```powershell
 .\dev.ps1 setup
@@ -62,6 +62,14 @@ SOLY_PYTHON='/pfad zu Python/bin/python3.12' ./dev.sh setup
 $env:SOLY_PYTHON = 'C:\Pfad zu Python\python.exe'
 .\dev.ps1 setup
 ```
+
+
+**Windows-Weg:** Mit den bestehenden Pins zunächst **WSL2** und die Unix-Befehle
+in einem Linux-Checkout verwenden. `actions/setup-python` konnte Python 3.12.15
+auf Windows 2025 nicht bereitstellen. Der native PowerShell-Einstieg setzt einen
+selbst bereitgestellten Python-3.12.15-Interpreter voraus (`SOLY_PYTHON`); dieser
+native Installationsweg und Windows PowerShell 5.1 sind bislang nicht verifiziert.
+Es wird nicht automatisch auf eine andere Python-Version ausgewichen.
 
 Falls die lokale PowerShell-Richtlinie Skripte sperrt, die geltende Richtlinie
 prüfen oder den Python-Einstieg direkt aufrufen; die Skripte ändern keine
@@ -176,8 +184,9 @@ Die CI läuft bei **jedem Push auf jeden Branch** sowie bei **Pull Requests nach
 und das eigene Paket über `setup --use-current-python`. Danach führt
 `check --use-current-python` dieselben Prüfungen wie lokal aus, einschließlich
 der Typprüfung von `src`, `tests` und `scripts`. Die Python-Jobs laufen unter
-Ubuntu 24.04 mit `dev.sh` und Windows 2025 mit `dev.ps1`, jeweils in einem
-Checkout-Pfad mit Leerzeichen.
+Ubuntu 24.04 mit `dev.sh` und PowerShell 7 über `dev.ps1`, jeweils in einem
+Checkout-Pfad mit Leerzeichen. Der Windows-Runner konnte Python 3.12.15 über
+`actions/setup-python` nicht bereitstellen; die Laufzeitpins bleiben unverändert.
 
 **Docker-Build und Container-Smoke-Test laufen ausschließlich bei Pushes auf
 `main`**, nachdem alle Python-Prüfungen erfolgreich waren. Auf Arbeitsbranches
@@ -200,10 +209,11 @@ fehlende Werkzeuge und Plattformhinweise sind zusätzlich durch Regressionstests
 abgedeckt. `./dev.sh docker-smoke` wurde auf **linux/amd64** erfolgreich ausgeführt.
 Locks, Laufzeitpins und der bestehende Container-Smoke-Test wurden nicht geändert.
 
-Native Windows-Ausführung ist in der CI auf **windows-2025** vorgesehen;
-Windows PowerShell 5.1 und macOS wurden lokal nicht ausgeführt. Ein PowerShell-
-Test unter Linux ist kein nativer Windows-Nachweis. Die tatsächlichen GitHub-
-Ergebnisse sind im Actions-Lauf des jeweiligen Commits zu prüfen.
+Native Windows-Ausführung konnte in der CI auf **windows-2025** nicht
+geprüft werden: `actions/setup-python` stellt dort Python 3.12.15 nicht bereit.
+Die endgültige CI prüft daher Unix und PowerShell 7 unter Ubuntu 24.04.
+Windows PowerShell 5.1 und macOS wurden nicht ausgeführt. Ein PowerShell-Test
+unter Linux ist kein nativer Windows-Nachweis.
 
 ## Unterstützter Ereignisvertrag
 
