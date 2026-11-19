@@ -5,41 +5,97 @@ Git-Submodule unter `Soly/simulator/`. Bisher sind die Python-Projektgrundlage
 und ein Import-Smoke-Test eingerichtet; die Ereignisgenerierung folgt separat.
 Docker-Image und CI validieren diesen Ausgangsstand.
 
-## Einrichtung
+## Entwicklungsbefehle
 
-Voraussetzung: **Python 3.12.15**. Alle Befehle im Service-Verzeichnis ausführen.
-Falls der Interpreter nicht im Suchpfad liegt, seinen vollständigen Pfad verwenden.
-
-Linux/macOS (Bash/Zsh):
+Voraussetzung für lokale Entwicklung: **Python 3.12.x**. `dev.sh` (POSIX-Shell unter Linux) und `dev.ps1`
+(Windows PowerShell 5.1 oder PowerShell 7) delegieren an `scripts/dev.py` mit
+Python-Standardbibliothek. Lokal sind alle 3.12-Patchversionen zugelassen.
+**CI und Docker bleiben auf Python 3.12.15 festgelegt**; Locks und Image-Pins
+werden nicht verändert. Jeder Checkout besitzt eine eigene `.venv`; Aktivierung
+ist unnötig. Die Befehle bestimmen den Repository-Pfad selbst. Auch ein Aufruf aus
+einem anderen Verzeichnis oder ein Checkout-Pfad mit Leerzeichen funktioniert:
 
 ```bash
-python3.12 --version
-python3.12 -m venv .venv
-source .venv/bin/activate
+"/pfad mit Leerzeichen/Soly-Simulator/dev.sh" setup
+"/pfad mit Leerzeichen/Soly-Simulator/dev.sh" check
 ```
 
-Windows (PowerShell):
+Im Repository unter Unix:
+
+```bash
+./dev.sh setup
+./dev.sh check
+./dev.sh format
+```
+
+Unter Windows PowerShell (mit Python 3.12.x):
 
 ```powershell
-py -3.12 --version
-py -3.12 -m venv .venv
-.\.venv\Scripts\Activate.ps1
+.\dev.ps1 setup
+.\dev.ps1 check
+.\dev.ps1 format
+# Aus einem anderen Verzeichnis:
+& 'C:\Projekte mit Leerzeichen\Soly-Simulator\dev.ps1' check
 ```
 
-Anschließend auf allen Plattformen zuerst die vollständigen, mit SHA-256-Hashes
-fixierten Entwicklungs- und Buildabhängigkeiten installieren und danach das eigene
-Paket editierbar einrichten. Die Installation des Pakets löst keine zusätzlichen
-Abhängigkeiten auf und startet keine unkontrollierte Build-Umgebung:
+| Befehl | Wirkung |
+|---|---|
+| `setup` | Erstellt oder verwendet `.venv`, installiert vorhandene Hash-Locks und prüft Abhängigkeiten. Erneut ausführbar; keine Lock-Neuauflösung. |
+| `check` | `pip check`, pytest, Ruff-Linting, Ruff-Formatprüfung und mypy einschließlich `scripts/`; stoppt beim ersten Fehler. |
+| `format` | Schreibt ausdrücklich Ruff-Formatänderungen in Projektdateien. |
+| `docker-smoke` | Baut `linux/amd64` als `soly-simulator:dev-smoke` und führt den vorhandenen isolierten Container-Smoke-Test aus. |
+
+`check` formatiert keine Dateien und legt Tool-Caches/Bytecode nicht im Checkout
+an. Externe Fehlercodes werden weitergegeben. Kein Befehl aktualisiert Submodule,
+löscht lokale Daten oder verändert globale Systemeinstellungen.
+
+`docker-smoke` überspringt die lokale `.venv` und verwendet einen Host-Interpreter;
+`SOLY_PYTHON` bleibt als ausdrückliche Vorgabe vorrangig.
+
+Interpreterwahl: `SOLY_PYTHON` (ein vollständiger Dateipfad, keine zusätzlichen
+Argumente), vorhandene `.venv`, dann `python3.12`/`python3`/`python` unter Unix;
+PowerShell versucht vor den Python-Befehlen zusätzlich `py -3.12`. Eine ungeeignete
+Python-Version oder unvollständige `.venv` führt zu einem Hinweis, nicht zum
+Löschen/Ersetzen. Bei Bedarf die vorhandene Umgebung zuerst selbst prüfen und
+beiseitelegen. Einen bestimmten Interpreter auswählen:
 
 ```bash
-python -m pip install --require-hashes --only-binary=:all: -r requirements/dev.txt
-python -m pip install --no-deps --no-build-isolation -e ".[dev]"
-python -m pip check
+SOLY_PYTHON='/pfad zu Python/bin/python3.12' ./dev.sh setup
 ```
 
-In neuen Shells die vorhandene Umgebung erneut aktivieren; mit `deactivate`
-verlassen. `.venv/`, Caches und Build-Artefakte sind über `.gitignore`
-ausgeschlossen. Globale Paketinstallationen sind nicht erforderlich.
+```powershell
+$env:SOLY_PYTHON = 'C:\Pfad zu Python\python.exe'
+.\dev.ps1 setup
+```
+
+
+**Unter Linux und Windows getestet:** Die Entwicklungsbefehle verwenden lokal
+Python 3.12.x und dieselben Hash-Locks. Unter Linux laufen sie über `dev.sh`,
+unter Windows über `dev.ps1` mit Windows PowerShell 5.1 oder PowerShell 7.
+`dev.ps1` findet Python über `py -3.12`, sofern weder `SOLY_PYTHON` noch eine
+vorhandene `.venv` Vorrang haben. Ergebnisse und Plattformen stehen im Abschnitt
+[Validierung von SOLY-18](#validierung-von-soly-18).
+
+Falls die lokale PowerShell-Richtlinie Skripte sperrt, die geltende Richtlinie
+prüfen oder den Python-Einstieg direkt aufrufen; die Skripte ändern keine
+Sicherheitseinstellungen und verwenden keinen Execution-Policy-Bypass:
+
+```powershell
+py -3.12 scripts/dev.py setup
+& .\.venv\Scripts\python.exe scripts/dev.py check
+```
+
+Die CI nutzt `setup --use-current-python` und `check --use-current-python` mit dem
+bereits durch Actions eingerichteten Python. Lokal erlaubt `setup` diese Option
+nur in einer virtuellen Umgebung; außerhalb davon ist sie ausschließlich mit
+`CI=true` vorgesehen. Normalerweise ohne diese Option arbeiten. Die Skripte und
+Textdateien verwenden festgelegte Zeilenenden; Vertragsartefakte behalten über
+`.gitattributes` ihre exakten Bytes.
+
+`setup` installiert `requirements/dev.txt` mit
+`--require-hashes --only-binary=:all:`, danach das eigene Paket editierbar mit
+`--no-deps --no-build-isolation -e ".[dev]"`. Das Paket löst keine weiteren
+Abhängigkeiten auf. `.venv/`, Caches und Build-Artefakte bleiben ignoriert.
 
 ## Struktur
 
@@ -53,31 +109,17 @@ Dockerfile          Mehrstufiger Paket-Build und Laufzeit-Image
 pyproject.toml      Paketmetadaten, Abhängigkeiten und Werkzeugkonfiguration
 ```
 
-## Prüfungen
-
-In der aktivierten Umgebung:
-
-```bash
-python -m pip check              # Abhängigkeitskonsistenz
-python -m pytest                 # Tests
-python -m ruff check .           # Linting
-python -m ruff format --check .  # Formatprüfung
-python -m mypy src tests         # Typprüfung von Quellcode und Tests
-```
-
-Zum automatischen Formatieren: `python -m ruff format .`.
-
-
 ## Docker
 
 Alle Befehle benötigen nur einen Checkout von **Soly-Simulator**, kein Hauptrepo,
-keine lokale Python-Installation und keine `.venv`. Voraussetzung ist eine laufende
+keine `.venv`. Der Wrapper benötigt einen Python-Interpreter (empfohlen 3.12.15);
+Voraussetzung ist eine laufende
 Docker Engine. Die geprüfte Zielplattform ist **linux/amd64**; andere Plattformen
 sind bisher nicht verifiziert.
 
 ```bash
-docker build --platform linux/amd64 --tag soly-simulator:local .
-docker run --rm --network none --read-only --workdir /tmp soly-simulator:local
+./dev.sh docker-smoke
+# PowerShell: .\dev.ps1 docker-smoke
 ```
 
 Der Standardbefehl ist vorerst ein Smoke-Test, kein fachlicher Simulator-Start.
@@ -124,7 +166,7 @@ Eingaben, garantiert jedoch keine bitweise identischen Docker-Layer oder Wheel-Z
 
 Lockdateien werden bewusst mit **Python 3.12.15** und **pip-tools 7.5.2**
 aktualisiert. Dafür eine separate Umgebung anlegen und aktivieren
-(`python -m venv .venv-lock`, Aktivierung wie oben), dann:
+(`python -m venv .venv-lock`, unter Unix `source .venv-lock/bin/activate`, unter Windows `.\.venv-lock\Scripts\Activate.ps1`), dann:
 
 ```bash
 python -m pip install "pip-tools==7.5.2"
@@ -144,16 +186,42 @@ Lockdateien gemeinsam aktualisieren.
 
 Die CI läuft bei **jedem Push auf jeden Branch** sowie bei **Pull Requests nach
 `main`**. Sie installiert Python **3.12.15**, die gehashten Entwicklungsabhängigkeiten
-und das eigene Paket mit denselben Befehlen wie lokal. Danach laufen `pip check`,
-pytest, Ruff-Linting, Ruff-Formatprüfung und mypy für `src` und `tests`.
+und das eigene Paket über `setup --use-current-python`. Danach führt
+`check --use-current-python` dieselben Prüfungen wie lokal aus, einschließlich
+der Typprüfung von `src`, `tests` und `scripts`. Die Python-Jobs laufen unter
+Ubuntu 24.04 mit `dev.sh` und PowerShell 7 über `dev.ps1`, jeweils in einem
+Checkout-Pfad mit Leerzeichen. Die lokalen Prüfungen unter Linux und Windows
+sind im Abschnitt [Validierung von SOLY-18](#validierung-von-soly-18) dokumentiert.
 
 **Docker-Build und Container-Smoke-Test laufen ausschließlich bei Pushes auf
 `main`**, nachdem alle Python-Prüfungen erfolgreich waren. Auf Arbeitsbranches
 und in Pull Requests wird kein Docker-Image gebaut. Ein fehlgeschlagener Build
-oder Smoke-Test lässt den Workflow fehlschlagen. Die Actions sind über Commit-IDs
+oder Smoke-Test über `./dev.sh docker-smoke` lässt den Workflow fehlschlagen. Die Actions sind über Commit-IDs
 fixiert; der Workflow besitzt nur `contents: read` und benötigt keine Secrets.
 Images werden nicht in eine Registry veröffentlicht.
 
+
+## Validierung von SOLY-18
+
+**Unter Linux und Windows getestet**, Stand **19. November 2026**:
+
+| Umgebung | Vollständiges `check` |
+|---|---|
+| Linux x86_64, Ubuntu 22.04.5 unter WSL2, Python 3.12.16; POSIX-Shell und PowerShell 7.5.4 | 33 Tests bestanden, pip check, Ruff und mypy erfolgreich |
+| Windows 10 x86_64, Python 3.12.10; Windows PowerShell 5.1 und PowerShell 7.6.9 | 26 Tests bestanden, 7 Unix-Fälle übersprungen; pip check, Ruff und mypy erfolgreich |
+
+Frische eigenständige Checkouts in Pfaden mit Leerzeichen wurden von außerhalb
+des Repository-Verzeichnisses geprüft: `setup`, erneutes `setup` mit Erhalt der
+`.venv`, `check` und `format` über beide Einstiege sowie `setup/check` mit
+`--use-current-python`. Inhalt und Änderungszeit der Projektdateien blieben
+unverändert. Die unter Windows übersprungenen Unix-Fälle bestanden unter Linux.
+
+Der aktuelle Container-Build und `docker-smoke` bestanden auf **linux/amd64**
+mit Docker Engine 29.1.3 und der festgeschriebenen Laufzeit.
+
+Hash-Locks, CI-Pins, Image-Digests und Vertragsartefakte blieben unverändert.
+Die lokalen Paketmetadaten erlauben Python `>=3.12,<3.13`; CI und Container
+verwenden weiterhin Python 3.12.15. macOS wurde nicht geprüft.
 
 ## Unterstützter Ereignisvertrag
 
@@ -186,3 +254,8 @@ und der [Git-Workflow](https://github.com/vegedy/Soly/blob/main/Soly-Issue-und-G
 erklären Issues, SOLY-Branches, Service-PRs und die anschließende Submodule-Integration.
 Die [Technologieentscheidungen](https://github.com/vegedy/Soly/blob/main/Soly-Technologieentscheidungen.md)
 unterscheiden historische Auswahl und implementierten Stand.
+
+Die CI prüft zusätzlich den lokalen Setup-Weg in einem frischen Checkout mit
+Leerzeichen: Unix-Setup, erneutes PowerShell-Setup mit Erhalt der bestehenden
+`.venv`, danach `check` über beide Einstiege ohne `--use-current-python`.
+Alle Aufrufe dieses Jobs erfolgen außerhalb des Checkout-Verzeichnisses.
