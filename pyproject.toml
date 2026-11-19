@@ -7,7 +7,7 @@ name = "soly-simulator"
 version = "0.1.0"
 description = "Datensimulation für die Soly-Pipeline"
 readme = "README.md"
-requires-python = "==3.12.15"
+requires-python = ">=3.12,<3.13"
 license = "MIT"
 license-files = ["LICENSE"]
 dependencies = []

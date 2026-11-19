@@ -5,7 +5,7 @@
   Aktuell bestehen Paketgrundlage, Container-Smoke-Test, CI und Vertragskopien;
   die fachliche Implementierung folgt separat. Code unter `src/`, Tests in `tests/`.
 - Einrichtung, Locks und Docker-Kommandos: [README.md](README.md).
-  Python 3.12.15 mit eigener `.venv` verwenden. Den hashgesicherten `requirements/dev.txt`-Lock als Wheels installieren, dann das eigene Paket mit `--no-deps --no-build-isolation -e ".[dev]"` einrichten.
+  Lokal Python 3.12.x mit eigener `.venv` verwenden; CI und Docker bleiben auf 3.12.15 festgelegt. Den hashgesicherten `requirements/dev.txt`-Lock als Wheels installieren, dann das eigene Paket mit `--no-deps --no-build-isolation -e ".[dev]"` einrichten.
 - Issues zentral in [vegedy/Soly](https://github.com/vegedy/Soly/issues).
   Vollständiger Ablauf: [CONTRIBUTING.md](https://github.com/vegedy/Soly/blob/main/CONTRIBUTING.md),
   [Git-Workflow](https://github.com/vegedy/Soly/blob/main/Soly-Issue-und-Git-Workflow.md),

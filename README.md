@@ -7,7 +7,7 @@ Docker-Image und CI validieren diesen Ausgangsstand.
 
 ## Entwicklungsbefehle
 
-Voraussetzung für lokale Entwicklung: **Python 3.12.x** (z. B. 3.12.10). `dev.sh` (POSIX-Shell unter Unix) und `dev.ps1`
+Voraussetzung für lokale Entwicklung: **Python 3.12.x**. `dev.sh` (POSIX-Shell unter Linux) und `dev.ps1`
 (Windows PowerShell 5.1 oder PowerShell 7) delegieren an `scripts/dev.py` mit
 Python-Standardbibliothek. Lokal sind alle 3.12-Patchversionen zugelassen.
 **CI und Docker bleiben auf Python 3.12.15 festgelegt**; Locks und Image-Pins
@@ -69,13 +69,12 @@ $env:SOLY_PYTHON = 'C:\Pfad zu Python\python.exe'
 ```
 
 
-**Windows-Weg:** Für Hauptrepo, Simulator und Ingestion ist lokal Python
-3.12.x vorgesehen (z. B. 3.12.10). `dev.ps1` verwendet automatisch `py -3.12`,
-sofern weder `SOLY_PYTHON` noch eine vorhandene `.venv` Vorrang haben. Version
-prüfen: `py -3.12 --version`. `SOLY_PYTHON` bleibt als Override erhalten.
-Native Windows-Ausführung einschließlich Windows PowerShell 5.1 wurde noch nicht
-vollständig getestet. Processing benötigt weiterhin WSL2 oder Linux-Container,
-da natives Windows-PyFlink nicht unterstützt wird.
+**Unter Linux und Windows getestet:** Die Entwicklungsbefehle verwenden lokal
+Python 3.12.x und dieselben Hash-Locks. Unter Linux laufen sie über `dev.sh`,
+unter Windows über `dev.ps1` mit Windows PowerShell 5.1 oder PowerShell 7.
+`dev.ps1` findet Python über `py -3.12`, sofern weder `SOLY_PYTHON` noch eine
+vorhandene `.venv` Vorrang haben. Ergebnisse und Plattformen stehen im Abschnitt
+[Validierung von SOLY-18](#validierung-von-soly-18).
 
 Falls die lokale PowerShell-Richtlinie Skripte sperrt, die geltende Richtlinie
 prüfen oder den Python-Einstieg direkt aufrufen; die Skripte ändern keine
@@ -191,8 +190,8 @@ und das eigene Paket über `setup --use-current-python`. Danach führt
 `check --use-current-python` dieselben Prüfungen wie lokal aus, einschließlich
 der Typprüfung von `src`, `tests` und `scripts`. Die Python-Jobs laufen unter
 Ubuntu 24.04 mit `dev.sh` und PowerShell 7 über `dev.ps1`, jeweils in einem
-Checkout-Pfad mit Leerzeichen. Der Windows-Runner konnte Python 3.12.15 über
-`actions/setup-python` nicht bereitstellen; die Laufzeitpins bleiben unverändert.
+Checkout-Pfad mit Leerzeichen. Die lokalen Prüfungen unter Linux und Windows
+sind im Abschnitt [Validierung von SOLY-18](#validierung-von-soly-18) dokumentiert.
 
 **Docker-Build und Container-Smoke-Test laufen ausschließlich bei Pushes auf
 `main`**, nachdem alle Python-Prüfungen erfolgreich waren. Auf Arbeitsbranches
@@ -204,22 +203,25 @@ Images werden nicht in eine Registry veröffentlicht.
 
 ## Validierung von SOLY-18
 
-Am **3. November 2026** unter **Linux x86_64**, Python **3.12.15** und
-**PowerShell 7.5.4** tatsächlich ausgeführt: frischer eigenständiger Checkout in
-einem Pfad mit Leerzeichen, `setup` über Unix und PowerShell erneut ausgeführt,
-`check` und `format` über beide Einstiege, außerdem `setup/check` mit
-`--use-current-python`. Alle Prüfungen erfolgreich (**15 Tests**, pip check,
-Ruff und mypy). Dateiinhalt und Änderungszeit der Projektdateien blieben bei
-beiden `check`-Aufrufen unverändert. Fehlercodes, unvollständige Umgebungen,
-fehlende Werkzeuge und Plattformhinweise sind zusätzlich durch Regressionstests
-abgedeckt. `./dev.sh docker-smoke` wurde auf **linux/amd64** erfolgreich ausgeführt.
-Locks, Laufzeitpins und der bestehende Container-Smoke-Test wurden nicht geändert.
+**Unter Linux und Windows getestet**, Stand **19. November 2026**:
 
-Native Windows-Ausführung konnte in der CI auf **windows-2025** nicht
-geprüft werden: `actions/setup-python` stellt dort Python 3.12.15 nicht bereit.
-Die endgültige CI prüft daher Unix und PowerShell 7 unter Ubuntu 24.04.
-Windows PowerShell 5.1 und macOS wurden nicht ausgeführt. Ein PowerShell-Test
-unter Linux ist kein nativer Windows-Nachweis.
+| Umgebung | Vollständiges `check` |
+|---|---|
+| Linux x86_64, Ubuntu 22.04.5 unter WSL2, Python 3.12.16; POSIX-Shell und PowerShell 7.5.4 | 33 Tests bestanden, pip check, Ruff und mypy erfolgreich |
+| Windows 10 x86_64, Python 3.12.10; Windows PowerShell 5.1 und PowerShell 7.6.9 | 26 Tests bestanden, 7 Unix-Fälle übersprungen; pip check, Ruff und mypy erfolgreich |
+
+Frische eigenständige Checkouts in Pfaden mit Leerzeichen wurden von außerhalb
+des Repository-Verzeichnisses geprüft: `setup`, erneutes `setup` mit Erhalt der
+`.venv`, `check` und `format` über beide Einstiege sowie `setup/check` mit
+`--use-current-python`. Inhalt und Änderungszeit der Projektdateien blieben
+unverändert. Die unter Windows übersprungenen Unix-Fälle bestanden unter Linux.
+
+Der aktuelle Container-Build und `docker-smoke` bestanden auf **linux/amd64**
+mit Docker Engine 29.1.3 und der festgeschriebenen Laufzeit.
+
+Hash-Locks, CI-Pins, Image-Digests und Vertragsartefakte blieben unverändert.
+Die lokalen Paketmetadaten erlauben Python `>=3.12,<3.13`; CI und Container
+verwenden weiterhin Python 3.12.15. macOS wurde nicht geprüft.
 
 ## Unterstützter Ereignisvertrag
 
